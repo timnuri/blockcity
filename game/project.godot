@@ -1,0 +1,44 @@
+; Engine configuration file.
+
+config_version=5
+
+[application]
+
+config/name="Блок Сити"
+config/description="Block Puzzle с кампанией и своим городом"
+config/quit_on_go_back=false
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7")
+config/icon="res://icon.png"
+
+[autoload]
+
+Save="*res://scripts/save.gd"
+Sfx="*res://scripts/sfx.gd"
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1280
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+window/energy_saving/keep_screen_on=true
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=false
+pointing/emulate_mouse_from_touch=true
+
+[gui]
+
+theme/custom_font="res://fonts/Inter-SemiBold.otf"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+2d/snap/snap_2d_transforms_to_pixel=false
+anti_aliasing/quality/msaa_2d=1
+environment/defaults/default_clear_color=Color(0.06, 0.08, 0.16, 1)
