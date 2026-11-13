@@ -31,6 +31,8 @@
 - Иконка `game/icon.png` (город из блоков), сделана скриптом PIL.
 - Тесты: `tests/test_logic.gd` (логика, запускается в сборке), `tests/balance.gd` (бот по всем уровням), `tests/shots.gd` (снимки экранов).
 
+- Репозиторий `timnuri/blockcity` создан (13.11.2026), Pages включены, доступ Claude GitHub App выдан. Первая сборка прошла: APK (~54 МБ, armv7 + arm64) в Releases, браузерная версия https://timnuri.github.io/blockcity/
+
 ## Как проверять в чате Claude
 - Godot: `git clone https://github.com/timnuri/durak` → `git fetch origin get-godot && git checkout origin/get-godot -- godot.zip` (прямое скачивание с GitHub releases отсюда отвечает 504).
 - Логика: `godot --headless --path game -s res://tests/test_logic.gd`
@@ -47,7 +49,6 @@
 - VIP-валюта (если понадобится): оформление поля и блоков, темы города, ускорение строительства, «продолжить партию» в бесконечном режиме.
 
 ## Не сделано / дальше
-- Тим должен создать пустой репозиторий `timnuri/blockcity` и включить Pages (Source: GitHub Actions) — тогда Claude зальёт проект.
 - Проверить на телефоне Тима: удобство перетаскивания, размер фигур в лотке, скорость, звук и вибрацию.
 - Версия 0.3 — город (см. решения выше).
 - Версия 0.4 — реклама (за замену, за продолжение партии), статистика (сколько игроков вернулось), закрытый тест в Google Play.
