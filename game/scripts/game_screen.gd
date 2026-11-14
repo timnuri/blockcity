@@ -19,6 +19,8 @@ var rng := RandomNumberGenerator.new()
 var finished := false
 
 var view: GameView
+var city: CityBack
+var _shown_score := 0.0
 var _title: Label
 var _score: Label
 var _best: Label
@@ -32,6 +34,10 @@ var _overlay: Control
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	rng.randomize()
+	city = CityBack.new()
+	city.set_anchors_preset(Control.PRESET_FULL_RECT)
+	city.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(city)
 	view = GameView.new()
 	view.set_anchors_preset(Control.PRESET_FULL_RECT)
 	view.top_margin = 262.0
@@ -67,6 +73,9 @@ func start_endless(resume := true) -> void:
 		view.set_board(board)
 		_deal()
 	_title.text = "Бесконечный"
+	_shown_score = board.score
+	_score.text = str(board.score)
+	city.reset(CityBack.START + board.score / CityBack.STEP)
 	_refresh()
 	_check_stuck()
 
@@ -78,6 +87,7 @@ func start_level(n: int) -> void:
 	board.load_layout(level.layout, rng)
 	goals = Levels.resolve_goals(level, board)
 	view.set_board(board)
+	city.reset(5 + n)
 	_title.text = "Уровень %d" % n
 	_deal()
 	_refresh()
@@ -210,7 +220,7 @@ func _finish(win: bool, why := "") -> void:
 		Save.data.endless = null
 		Save.save()
 		Sfx.play("win" if record else "lose")
-		var body := [_big("%d" % board.score, 96, UI.TEXT)]
+		var body := [_big("%d" % board.score, 96, UI.INK)]
 		body.append(_text("Новый рекорд!" if record else "Рекорд: %d" % max(best, board.score), UI.GOLD if record else UI.DIM))
 		if coins > 0:
 			body.append(_text("+%d монет" % coins, UI.GOLD))
@@ -295,7 +305,7 @@ func _build_hud() -> void:
 	back_b.size = Vector2(84, 84)
 	back_b.pressed.connect(back)
 	top.add_child(back_b)
-	_title = UI.label("", 30, UI.DIM, true)
+	_title = UI.label("", 30, UI.TEXT, true)
 	_title.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title.offset_top = 40
@@ -373,19 +383,27 @@ func _refresh() -> void:
 			var l := UI.label("● %s ≤ %d" % [nm, m[3 - k]], 24, UI.medal_color(k) if on else Color(1, 1, 1, 0.25), true)
 			_medals.add_child(l)
 	else:
-		_score.text = str(board.score)
+		if board.score != int(_shown_score):
+			var tw := create_tween()
+			tw.tween_method(func(v: float): _shown_score = v; _score.text = str(int(v)), _shown_score, float(board.score), 0.35)
+			_score.pivot_offset = _score.size * 0.5
+			_score.scale = Vector2(1.18, 1.18)
+			create_tween().tween_property(_score, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		if city.set_score(board.score):
+			view.float_text("Новое здание в городе!", Vector2(size.x * 0.5, view.board_rect.position.y - 20), UI.GOLD, 40)
+			Sfx.play("build")
 		_best.text = "Рекорд\n%d" % max(int(Save.data.best), board.score)
 	var n := Save.boosters("swap")
 	_swap_btn.text = ("Нажми на фигуру…  (отмена)" if view.swap_mode else "Заменить фигуру  ×%d" % n)
 
 
 func _chip(text: String, done: bool, warn := false) -> PanelContainer:
-	var p := UI.panel(UI.ACCENT.darkened(0.45) if done else (UI.RED.darkened(0.4) if warn else UI.PANEL.lightened(0.06)), 22, 14)
-	p.add_child(UI.label(text, 28, UI.TEXT, true))
+	var p := UI.panel(UI.ACCENT if done else (UI.RED if warn else Color(1, 1, 1, 0.92)), 22, 14)
+	p.add_child(UI.label(text, 28, UI.TEXT if (done or warn) else UI.INK, true))
 	return p
 
 
-func _text(s: String, col := UI.TEXT, size := 30) -> Label:
+func _text(s: String, col := UI.INK, size := 30) -> Label:
 	var l := UI.label(s, size, col)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -416,20 +434,20 @@ func _medal_node(m: int) -> Control:
 func _popup(title: String, body: Array, buttons: Array) -> void:
 	_close_popup()
 	var ov := ColorRect.new()
-	ov.color = Color(0.02, 0.03, 0.1, 0.72)
+	ov.color = Color(0.08, 0.14, 0.3, 0.55)
 	ov.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(ov)
 	_overlay = ov
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ov.add_child(center)
-	var p := UI.panel(UI.BG2, 40, 40)
+	var p := UI.panel(UI.CARD, 40, 40)
 	center.add_child(p)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 22)
 	v.custom_minimum_size.x = 560
 	p.add_child(v)
-	v.add_child(_big(title, 48, UI.TEXT))
+	v.add_child(_big(title, 48, UI.INK))
 	for b in body:
 		v.add_child(b)
 	var gap := Control.new()

@@ -38,6 +38,7 @@ func _run() -> void:
 	main = load("res://main.tscn").instantiate()
 	root.add_child(main)
 	await _shot("1_menu")
+	S.data.levels = {"1": {"medal": 3, "moves": 9}, "2": {"medal": 2, "moves": 20}, "3": {"medal": 1, "moves": 30}, "4": {"medal": 3, "moves": 9}}
 	main.show_levels()
 	await _shot("2_levels")
 	main.start_endless(false)

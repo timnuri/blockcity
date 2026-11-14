@@ -29,6 +29,7 @@ var _particles: Array = []
 var _texts: Array = []
 var _pops := {}             # Vector2i -> время
 var _shake := 0.0
+var _flash := 0.0
 var _tray_t: Array[float] = [1.0, 1.0, 1.0]
 var _return := {}           # {i, from, t}
 var _time := 0.0
@@ -96,6 +97,7 @@ func _gui_input(e: InputEvent) -> void:
 			_hint_cells = []
 			_update_drag()
 			Sfx.play("pick")
+			Sfx.vibro(15, 0.4)
 			accept_event()
 		elif _drag >= 0:
 			var i := _drag
@@ -160,7 +162,8 @@ func play_place(r: Dictionary, col_i: int) -> void:
 	for c in r.cleared:
 		var d := Vector2(c.pos).distance_to(center)
 		var cc: Color = UI.BLOCKS[c.color] if c.kind == Board.BLOCK else Color("#c98a4b")
-		_effects.append({"type": "clear", "pos": c.pos, "col": cc, "t": -d * 0.035, "dur": 0.32, "burst": false})
+		var idx: int = c.color if c.kind == Board.BLOCK else -1
+		_effects.append({"type": "clear", "pos": c.pos, "col": cc, "idx": idx, "t": -d * 0.035, "dur": 0.32, "burst": false})
 	for b in r.boxes:
 		if b.left > 0:
 			_effects.append({"type": "wobble", "pos": b.pos, "t": 0.0, "dur": 0.35})
@@ -173,9 +176,16 @@ func play_place(r: Dictionary, col_i: int) -> void:
 		_effects.append({"type": "flash", "row": false, "k": x, "t": 0.0, "dur": 0.35, "col": col})
 	var cp := _cell_rect(Vector2i(roundi(center.x), roundi(center.y))).get_center()
 	if r.lines > 0:
-		Sfx.clear(r.combo)
-		Sfx.vibro(20 + 10 * r.lines)
-		_texts.append({"s": "+%d" % r.gained, "pos": cp, "t": 0.0, "dur": 1.0, "col": UI.TEXT, "size": 48})
+		Sfx.place()
+		Sfx.clear(r.combo, r.lines)
+		if r.lines >= 3 or r.combo >= 4:
+			Sfx.vibro_pattern([[70, 1.0], [110, 1.0]])
+		elif r.lines >= 2 or r.combo >= 2:
+			Sfx.vibro_pattern([[55, 1.0], [45, 0.7]])
+		else:
+			Sfx.vibro(60, 1.0)
+		_flash = 0.35 + 0.12 * min(r.lines, 4)
+		_texts.append({"s": "+%d" % r.gained, "pos": cp, "t": 0.0, "dur": 1.0, "col": UI.TEXT, "size": 52})
 		var word := ""
 		if r.lines >= 4:
 			word = "Невероятно!"
@@ -188,12 +198,18 @@ func play_place(r: Dictionary, col_i: int) -> void:
 		if word != "":
 			var mid := board_rect.get_center()
 			_texts = _texts.filter(func(t): return not t.get("word", false))
-			_texts.append({"s": word, "pos": mid, "t": -0.1, "dur": 1.2, "col": UI.GOLD, "size": 60, "word": true})
-		if r.lines >= 3 or r.combo >= 3:
-			_shake = 1.0
+			_texts.append({"s": word, "pos": mid, "t": -0.1, "dur": 1.2, "col": UI.GOLD, "size": 64 + 4 * min(r.combo, 6), "word": true})
+		_shake = clampf(0.35 + 0.25 * (r.lines - 1) + 0.1 * r.combo, 0.35, 1.3)
+		# Звёздочки-искры из центра
+		for k in 6 + 4 * r.lines:
+			var a := randf() * TAU
+			_particles.append({"p": cp, "v": Vector2(cos(a), sin(a)) * randf_range(300.0, 800.0), "life": 0.0,
+				"max": randf_range(0.5, 0.9), "col": UI.GOLD.lightened(randf() * 0.4), "s": cell * randf_range(0.1, 0.18),
+				"rot": randf() * TAU, "w": randf_range(-10.0, 10.0), "star": true})
 	else:
-		Sfx.play("place")
-		Sfx.vibro(12)
+		Sfx.place()
+		Sfx.vibro(35, 0.65)
+		_shake = maxf(_shake, 0.12)
 	queue_redraw()
 
 
@@ -258,7 +274,8 @@ func _process(delta: float) -> void:
 			_return = {}
 		active = true
 	_shake = max(0.0, _shake - delta * 2.5)
-	if active or not (_effects.is_empty() and _particles.is_empty() and _texts.is_empty()) or _shake > 0.0:
+	_flash = maxf(0.0, _flash - delta * 2.2)
+	if active or not (_effects.is_empty() and _particles.is_empty() and _texts.is_empty()) or _shake > 0.0 or _flash > 0.0:
 		queue_redraw()
 
 
@@ -284,18 +301,31 @@ func _draw() -> void:
 		var p = tray[_drag]
 		_draw_piece(p.cells, p.color, tl, cell * 0.96, 1.0, cell * 0.02)
 	_draw_texts()
+	if _flash > 0.0:
+		draw_rect(Rect2(Vector2.ZERO, size), Color(1, 1, 1, _flash * 0.35))
 
 
 func _draw_board() -> void:
-	var pad := cell * 0.12
-	# Подложка: каждая клетка (кроме ям) рисует фон с запасом — вместе получается панель с вырезами.
+	var pad := cell * 0.16
+	# Участок: бордюр (тротуар) и газон. Каждая клетка (кроме ям) рисует фон с запасом —
+	# вместе получается сплошной участок с вырезами под ямы.
 	for y in board.h:
 		for x in board.w:
 			if board.kind[board.idx(x, y)] != Board.HOLE:
-				UI.rrect(self, _cell_rect(Vector2i(x, y)).grow(pad), UI.PANEL, pad * 1.6)
+				var rr := _cell_rect(Vector2i(x, y)).grow(pad)
+				UI.rrect(self, Rect2(rr.position + Vector2(0, cell * 0.08), rr.size), UI.CURB_DARK, pad * 1.4)
+	for y in board.h:
+		for x in board.w:
+			if board.kind[board.idx(x, y)] != Board.HOLE:
+				UI.rrect(self, _cell_rect(Vector2i(x, y)).grow(pad), UI.CURB, pad * 1.4)
+	for y in board.h:
+		for x in board.w:
+			if board.kind[board.idx(x, y)] != Board.HOLE:
+				UI.rrect(self, _cell_rect(Vector2i(x, y)).grow(cell * 0.03), UI.GRASS2.darkened(0.12), cell * 0.1)
 	var hl_rows: Array = _preview.rows
 	var hl_cols: Array = _preview.cols
-	var drag_col: Color = UI.BLOCKS[tray[_drag].color] if _drag >= 0 else Color.WHITE
+	var drag_i: int = tray[_drag].color if _drag >= 0 else 0
+	var drag_col: Color = UI.BLOCKS[drag_i] if _drag >= 0 else Color.WHITE
 	for y in board.h:
 		for x in board.w:
 			var i := board.idx(x, y)
@@ -303,18 +333,20 @@ func _draw_board() -> void:
 			var r := _cell_rect(Vector2i(x, y))
 			var inner := r.grow(-cell * 0.04)
 			if k == Board.HOLE:
+				if x > 0 and y > 0 and x < board.w - 1 and y < board.h - 1:
+					_draw_pit(r)
 				continue
-			UI.rrect(self, inner, UI.CELL, cell * 0.14)
+			UI.rrect(self, inner, UI.GRASS if (x + y) % 2 == 0 else UI.GRASS2, cell * 0.14)
 			var lit := hl_rows.has(y) or hl_cols.has(x)
 			match k:
 				Board.BLOCK:
-					var c: Color = drag_col if lit else UI.BLOCKS[board.color[i]]
+					var ci: int = drag_i if lit else board.color[i]
 					var rr := inner
 					var p := Vector2i(x, y)
 					if _pops.has(p):
 						var t: float = _pops[p] / 0.25
 						rr = inner.grow(cell * 0.08 * sin(t * PI))
-					UI.draw_block(self, rr, c)
+					UI.draw_tile(self, rr, ci)
 				Board.STONE:
 					_draw_stone(inner)
 				Board.BOX:
@@ -322,7 +354,7 @@ func _draw_board() -> void:
 			if board.ice[i] > 0:
 				_draw_ice(inner, k == Board.EMPTY)
 			if lit and k == Board.EMPTY:
-				UI.rrect(self, inner, Color(drag_col, 0.18), cell * 0.14)
+				UI.rrect(self, inner, Color(1, 1, 1, 0.38), cell * 0.14)
 	# Подсказка
 	if not _hint_cells.is_empty():
 		var a := 0.25 + 0.2 * sin(_time * 6.0)
@@ -333,7 +365,7 @@ func _draw_board() -> void:
 		var p = tray[_drag]
 		for c in p.cells:
 			var rr := _cell_rect(_grid + c).grow(-cell * 0.04)
-			UI.draw_block(self, rr, UI.BLOCKS[p.color], 0.38)
+			UI.draw_tile(self, rr, p.color, 0.45)
 	# Эффекты линий и исчезающих клеток
 	for e in _effects:
 		if e.t < 0.0:
@@ -344,7 +376,10 @@ func _draw_board() -> void:
 				var rr := _cell_rect(e.pos).grow(-cell * 0.04)
 				var s: float = 1.0 - ease(k, 2.2)
 				var rc := Rect2(rr.get_center() - rr.size * s * 0.5, rr.size * s)
-				UI.draw_block(self, rc, e.col.lightened(0.3 * (1.0 - k)), 1.0 - k * 0.5)
+				if e.get("idx", -1) >= 0:
+					UI.draw_tile(self, rc, e.idx, 1.0 - k * 0.5)
+				else:
+					UI.draw_block(self, rc, e.col, 1.0 - k * 0.5)
 			"flash":
 				var a: float = (1.0 - k) * 0.55
 				var rr: Rect2
@@ -356,6 +391,15 @@ func _draw_board() -> void:
 				UI.rrect(self, rr.grow(g), Color(1, 1, 1, a * 0.6), cell * 0.3)
 			"wobble":
 				pass
+
+
+func _draw_pit(r: Rect2) -> void:
+	var rr := r.grow(-cell * 0.02)
+	UI.rrect(self, rr, UI.DIRT.darkened(0.15), cell * 0.18)
+	UI.rrect(self, Rect2(rr.position + Vector2(0, cell * 0.14), rr.size - Vector2(0, cell * 0.14)), UI.DIRT, cell * 0.18)
+	var d := UI.DIRT.darkened(0.25)
+	draw_circle(rr.position + rr.size * Vector2(0.3, 0.6), cell * 0.06, d)
+	draw_circle(rr.position + rr.size * Vector2(0.65, 0.75), cell * 0.05, d)
 
 
 func _draw_stone(r: Rect2) -> void:
@@ -444,7 +488,7 @@ func _draw_tray() -> void:
 func _draw_piece(cells: Array, col_i: int, tl: Vector2, cs: float, alpha: float, gap: float) -> void:
 	for c in cells:
 		var r := Rect2(tl + Vector2(c) * cs, Vector2(cs, cs)).grow(-gap)
-		UI.draw_block(self, r, UI.BLOCKS[col_i], alpha)
+		UI.draw_tile(self, r, col_i, alpha)
 
 
 func _draw_particles() -> void:
@@ -454,7 +498,15 @@ func _draw_particles() -> void:
 		col.a = 1.0 - k
 		var s: float = p.s * (1.0 - k * 0.5)
 		draw_set_transform(p.p, p.rot)
-		draw_rect(Rect2(Vector2(-s, -s) * 0.5, Vector2(s, s)), col)
+		if p.get("star", false):
+			var pts := PackedVector2Array()
+			for j in 10:
+				var rad: float = s * (0.75 if j % 2 == 0 else 0.32)
+				var ang := j * TAU / 10.0 - PI / 2.0
+				pts.append(Vector2(cos(ang), sin(ang)) * rad)
+			draw_colored_polygon(pts, col)
+		else:
+			draw_rect(Rect2(Vector2(-s, -s) * 0.5, Vector2(s, s)), col)
 	draw_set_transform(Vector2.ZERO)
 
 
