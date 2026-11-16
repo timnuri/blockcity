@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://jmna8mqsegmi"
-path="res://.godot/imported/Inter-SemiBold.otf-cbcc87718ff05e1f23bd13beeac010a0.fontdata"
+uid="uid://jq5mmvs1mtf1"
+path="res://.godot/imported/MPLUSRounded1c-Bold-sub.ttf-965611e5cfab2383dace6e10a0379180.fontdata"
 
 [deps]
 
-source_file="res://fonts/Inter-SemiBold.otf"
-dest_files=["res://.godot/imported/Inter-SemiBold.otf-cbcc87718ff05e1f23bd13beeac010a0.fontdata"]
+source_file="res://fonts/MPLUSRounded1c-Bold-sub.ttf"
+dest_files=["res://.godot/imported/MPLUSRounded1c-Bold-sub.ttf-965611e5cfab2383dace6e10a0379180.fontdata"]
 
 [params]
 

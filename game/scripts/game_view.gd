@@ -58,6 +58,7 @@ func _layout() -> void:
 	var sw := size.x / 3.0
 	for i in 3:
 		slots[i] = Rect2(Vector2(sw * i, ty), Vector2(sw, tray_h))
+
 	queue_redraw()
 
 
@@ -158,10 +159,10 @@ func play_place(r: Dictionary, col_i: int) -> void:
 		_pops[p] = 0.0
 		center += Vector2(p)
 	center /= max(1, r.placed.size())
-	var col: Color = UI.BLOCKS[col_i]
+	var col: Color = UI.block_color(col_i)
 	for c in r.cleared:
 		var d := Vector2(c.pos).distance_to(center)
-		var cc: Color = UI.BLOCKS[c.color] if c.kind == Board.BLOCK else Color("#c98a4b")
+		var cc: Color = UI.block_color(c.color) if c.kind == Board.BLOCK else Color("#c98a4b")
 		var idx: int = c.color if c.kind == Board.BLOCK else -1
 		_effects.append({"type": "clear", "pos": c.pos, "col": cc, "idx": idx, "t": -d * 0.035, "dur": 0.32, "burst": false})
 	for b in r.boxes:
@@ -294,6 +295,10 @@ func _draw() -> void:
 	draw_set_transform(sh)
 	_draw_board()
 	draw_set_transform(Vector2.ZERO)
+	# Белая панель под фигурами (макет)
+	var tp := Rect2(Vector2(18, slots[0].position.y), Vector2(size.x - 36, slots[0].size.y))
+	UI.rrect(self, Rect2(tp.position + Vector2(0, 6), tp.size), Color(0, 0, 0, 0.08), 40)
+	UI.rrect(self, tp, Color.WHITE, 40)
 	_draw_tray()
 	_draw_particles()
 	if _drag >= 0:
@@ -307,25 +312,21 @@ func _draw() -> void:
 
 func _draw_board() -> void:
 	var pad := cell * 0.16
-	# Участок: бордюр (тротуар) и газон. Каждая клетка (кроме ям) рисует фон с запасом —
-	# вместе получается сплошной участок с вырезами под ямы.
+	# Газон-подложка (макет «Солнечный городок»): каждая клетка, кроме краевых ям,
+	# рисует подложку с запасом — вместе получается сплошной участок.
 	for y in board.h:
 		for x in board.w:
-			if board.kind[board.idx(x, y)] != Board.HOLE:
+			if board.kind[board.idx(x, y)] != Board.HOLE or _pit_inside(x, y):
 				var rr := _cell_rect(Vector2i(x, y)).grow(pad)
-				UI.rrect(self, Rect2(rr.position + Vector2(0, cell * 0.08), rr.size), UI.CURB_DARK, pad * 1.4)
+				UI.rrect(self, Rect2(rr.position + Vector2(0, cell * 0.1), rr.size), UI.FIELD.darkened(0.18), pad * 1.6)
 	for y in board.h:
 		for x in board.w:
-			if board.kind[board.idx(x, y)] != Board.HOLE:
-				UI.rrect(self, _cell_rect(Vector2i(x, y)).grow(pad), UI.CURB, pad * 1.4)
-	for y in board.h:
-		for x in board.w:
-			if board.kind[board.idx(x, y)] != Board.HOLE:
-				UI.rrect(self, _cell_rect(Vector2i(x, y)).grow(cell * 0.03), UI.GRASS2.darkened(0.12), cell * 0.1)
+			if board.kind[board.idx(x, y)] != Board.HOLE or _pit_inside(x, y):
+				UI.rrect(self, _cell_rect(Vector2i(x, y)).grow(pad), UI.FIELD, pad * 1.6)
 	var hl_rows: Array = _preview.rows
 	var hl_cols: Array = _preview.cols
 	var drag_i: int = tray[_drag].color if _drag >= 0 else 0
-	var drag_col: Color = UI.BLOCKS[drag_i] if _drag >= 0 else Color.WHITE
+	var drag_col: Color = UI.block_color(drag_i) if _drag >= 0 else Color.WHITE
 	for y in board.h:
 		for x in board.w:
 			var i := board.idx(x, y)
@@ -333,10 +334,10 @@ func _draw_board() -> void:
 			var r := _cell_rect(Vector2i(x, y))
 			var inner := r.grow(-cell * 0.04)
 			if k == Board.HOLE:
-				if x > 0 and y > 0 and x < board.w - 1 and y < board.h - 1:
-					_draw_pit(r)
+				if _pit_inside(x, y):
+					_draw_pit(inner, x, y)
 				continue
-			UI.rrect(self, inner, UI.GRASS if (x + y) % 2 == 0 else UI.GRASS2, cell * 0.14)
+			UI.rrect(self, inner, UI.GRASS, cell * 0.14)
 			var lit := hl_rows.has(y) or hl_cols.has(x)
 			match k:
 				Board.BLOCK:
@@ -354,7 +355,8 @@ func _draw_board() -> void:
 			if board.ice[i] > 0:
 				_draw_ice(inner, k == Board.EMPTY)
 			if lit and k == Board.EMPTY:
-				UI.rrect(self, inner, Color(1, 1, 1, 0.38), cell * 0.14)
+				UI.rrect(self, inner.grow(cell * 0.03), Color(UI.LIGHT, 0.45), cell * 0.17)
+				UI.rrect(self, inner, UI.LIGHT, cell * 0.14)
 	# Подсказка
 	if not _hint_cells.is_empty():
 		var a := 0.25 + 0.2 * sin(_time * 6.0)
@@ -393,60 +395,108 @@ func _draw_board() -> void:
 				pass
 
 
-func _draw_pit(r: Rect2) -> void:
-	var rr := r.grow(-cell * 0.02)
-	UI.rrect(self, rr, UI.DIRT.darkened(0.15), cell * 0.18)
-	UI.rrect(self, Rect2(rr.position + Vector2(0, cell * 0.14), rr.size - Vector2(0, cell * 0.14)), UI.DIRT, cell * 0.18)
-	var d := UI.DIRT.darkened(0.25)
-	draw_circle(rr.position + rr.size * Vector2(0.3, 0.6), cell * 0.06, d)
-	draw_circle(rr.position + rr.size * Vector2(0.65, 0.75), cell * 0.05, d)
+## Яма внутри поля (не на краю) — рисуется квадратной ямой.
+func _pit_inside(x: int, y: int) -> bool:
+	return x > 0 and y > 0 and x < board.w - 1 and y < board.h - 1
 
 
+## Яма: квадратная, с земляным краем и тёмной серединой.
+## Соседние ямы сливаются в одну большую (например 2×2 на уровне 14).
+func _draw_pit(r: Rect2, x: int, y: int) -> void:
+	var gap := cell * 0.04
+	var rim := cell * 0.12
+	var l := _is_pit(x - 1, y)
+	var t := _is_pit(x, y - 1)
+	var rr := _is_pit(x + 1, y)
+	var b := _is_pit(x, y + 1)
+	var outer := r.grow_individual(gap if l else 0.0, gap if t else 0.0, gap if rr else 0.0, gap if b else 0.0)
+	UI.rrect(self, outer, Color("#7A5638"), 0.0 if (l or t or rr or b) else cell * 0.14)
+	var inner := r.grow_individual(gap if l else -rim, gap if t else -rim, gap if rr else -rim, gap if b else -rim)
+	UI.rrect(self, inner, Color("#2A1D14"), 0.0)
+	var low := inner
+	if not t:
+		low = inner.grow_side(SIDE_TOP, -cell * 0.14)
+	UI.rrect(self, low, Color("#3D2A1C"), 0.0)
+
+
+func _is_pit(x: int, y: int) -> bool:
+	if x < 0 or y < 0 or x >= board.w or y >= board.h:
+		return false
+	return board.kind[board.idx(x, y)] == Board.HOLE and _pit_inside(x, y)
+
+
+## Камень — вид сверху: круглый валун с тёмным контуром, бликом и трещиной.
 func _draw_stone(r: Rect2) -> void:
-	var c := Color("#7d879c")
-	UI.rrect(self, r, c.darkened(0.35), cell * 0.16)
-	UI.rrect(self, Rect2(r.position, Vector2(r.size.x, r.size.y * 0.9)), c, cell * 0.16)
-	var d := Color("#5d667a")
-	draw_circle(r.position + r.size * Vector2(0.3, 0.35), cell * 0.09, d)
-	draw_circle(r.position + r.size * Vector2(0.68, 0.55), cell * 0.12, d)
-	draw_circle(r.position + r.size * Vector2(0.4, 0.7), cell * 0.06, d)
-	draw_circle(r.position + r.size * Vector2(0.25, 0.22), cell * 0.04, Color(1, 1, 1, 0.35))
+	var c := r.get_center()
+	var rad := r.size.x * 0.44
+	var pts := PackedVector2Array()
+	var shape := [1.0, 0.93, 0.98, 0.9, 0.97, 1.0, 0.92, 0.96, 0.99, 0.91]
+	for j in shape.size():
+		var ang := j * TAU / shape.size() - 0.3
+		pts.append(c + Vector2(cos(ang), sin(ang)) * rad * shape[j])
+	var shadow := PackedVector2Array()
+	for q in pts:
+		shadow.append(q + Vector2(0, cell * 0.05))
+	draw_colored_polygon(shadow, Color(0, 0, 0, 0.22))
+	var outline := pts.duplicate()
+	outline.append(pts[0])
+	draw_colored_polygon(pts, Color("#9AA3AD"))
+	# нижняя-правая сторона темнее — объём
+	var low := PackedVector2Array()
+	for q in pts:
+		low.append(c + (q - c) * 0.82 + Vector2(cell * 0.05, cell * 0.06))
+	draw_colored_polygon(low, Color("#838C96"))
+	var top := PackedVector2Array()
+	for q in pts:
+		top.append(c + (q - c) * 0.72 + Vector2(-cell * 0.05, -cell * 0.06))
+	draw_colored_polygon(top, Color("#A9B1BA"))
+	draw_polyline(outline, Color("#4A5058"), maxf(2.0, cell * 0.06), true)
+	# блик
+	draw_circle(c + Vector2(-rad * 0.38, -rad * 0.4), rad * 0.18, Color("#D6DCE2"))
+	# трещина
+	var w := maxf(1.5, cell * 0.035)
+	var cr := Color("#5E666F")
+	draw_polyline(PackedVector2Array([c + Vector2(rad * 0.05, -rad * 0.1), c + Vector2(rad * 0.3, rad * 0.12), c + Vector2(rad * 0.2, rad * 0.42)]), cr, w, true)
+	draw_line(c + Vector2(rad * 0.3, rad * 0.12), c + Vector2(rad * 0.55, rad * 0.05), cr, w * 0.8, true)
 
 
+## Деревянный ящик: рамка, доски крест-накрест, число этажей в белом кружке.
 func _draw_box(r: Rect2, fl: int, p: Vector2i) -> void:
 	var off := 0.0
 	for e in _effects:
 		if e.type == "wobble" and e.pos == p:
 			off = sin(e.t * 40.0) * cell * 0.06 * (1.0 - e.t / e.dur)
 	r.position.x += off
-	var wood := Color("#c98a4b")
+	var wood := Color("#C98A4B")
+	var frame := Color("#8A5E36")
 	# Этажи — уступы сзади
 	for k in range(fl - 1, 0, -1):
 		var rr := Rect2(r.position + Vector2(0, -k * cell * 0.07), r.size)
-		UI.rrect(self, rr, wood.darkened(0.25 + 0.1 * k), cell * 0.12)
-	UI.rrect(self, r, wood.darkened(0.4), cell * 0.12)
-	var top := Rect2(r.position, Vector2(r.size.x, r.size.y * 0.9))
-	UI.rrect(self, top, wood, cell * 0.12)
-	var line := wood.darkened(0.3)
-	var w := cell * 0.05
-	draw_line(top.position + top.size * Vector2(0.12, 0.12), top.position + top.size * Vector2(0.88, 0.88), line, w)
-	draw_line(top.position + top.size * Vector2(0.88, 0.12), top.position + top.size * Vector2(0.12, 0.88), line, w)
-	draw_rect(top.grow(-cell * 0.06), line, false, w)
+		UI.rrect(self, rr, frame.darkened(0.1 * k), cell * 0.1)
+	UI.rrect(self, r, frame, cell * 0.1)
+	var top := r.grow(-cell * 0.08)
+	UI.rrect(self, top, wood, cell * 0.05)
+	var w := cell * 0.09
+	draw_line(top.position, top.end, frame, w, true)
+	draw_line(Vector2(top.end.x, top.position.y), Vector2(top.position.x, top.end.y), frame, w, true)
 	if fl > 1:
-		var c := top.get_center()
-		draw_circle(c, cell * 0.2, Color(0, 0, 0, 0.55))
-		var fs := int(cell * 0.3)
-		draw_string(UI.font_bold, c + Vector2(-cell * 0.2, fs * 0.36), str(fl), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.4, fs, UI.TEXT)
+		var c := r.get_center()
+		draw_circle(c, cell * 0.22, Color.WHITE)
+		var fs := int(cell * 0.32)
+		draw_string(UI.font_bold, c + Vector2(-cell * 0.22, fs * 0.36), str(fl), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.44, fs, frame)
 
 
+## Лёд — иней: голубая плитка с белой рамкой и трещинками.
 func _draw_ice(r: Rect2, empty: bool) -> void:
-	var a := 0.55 if empty else 0.35
-	UI.rrect(self, r, Color(0.72, 0.93, 1.0, a), cell * 0.14)
-	var w := cell * 0.05
-	var s := Color(1, 1, 1, 0.75)
-	draw_line(r.position + r.size * Vector2(0.18, 0.5), r.position + r.size * Vector2(0.5, 0.18), s, w)
-	draw_line(r.position + r.size * Vector2(0.32, 0.72), r.position + r.size * Vector2(0.72, 0.32), Color(1, 1, 1, 0.45), w)
-	draw_rect(r.grow(-w * 0.5), Color(1, 1, 1, 0.5), false, w * 0.6)
+	var rr := r.grow(-cell * 0.03)
+	UI.rrect(self, rr, Color(0.75, 0.91, 1.0, 0.88 if empty else 0.3), cell * 0.12)
+	var w := maxf(2.0, cell * 0.05)
+	draw_style_box(UI.box(Color.TRANSPARENT, int(cell * 0.12), int(w), Color(1, 1, 1, 0.95)), rr)
+	var s := Color(1, 1, 1, 0.9)
+	var p := rr.position
+	var z := rr.size
+	draw_polyline(PackedVector2Array([p + z * Vector2(0.22, 0.3), p + z * Vector2(0.38, 0.48), p + z * Vector2(0.3, 0.7)]), s, w * 0.6, true)
+	draw_line(p + z * Vector2(0.7, 0.22), p + z * Vector2(0.56, 0.45), s, w * 0.6, true)
 
 
 func _tray_scale(i: int) -> float:

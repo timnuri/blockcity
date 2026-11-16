@@ -32,6 +32,7 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	return  # фон теперь просто голубой (выбор Тима, 15.11.2026); город — в «Мой город»
 	var ground := size.y - 110.0
 	UI.draw_skyline(self, ground, size.x, Color("#a9d3f2"), 7, 30.0)
 	# Ближний ряд: построенные здания + «растущее» новое.

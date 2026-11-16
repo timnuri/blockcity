@@ -2,41 +2,47 @@ class_name UI
 extends RefCounted
 ## Общие цвета и готовые элементы интерфейса.
 
-# Светлая «дневная» тема: небо, газон, здания.
-const SKY_TOP := Color("#3f9fea")
-const SKY_BOT := Color("#bfe8ff")
-const BG := SKY_TOP
+# Тема «Солнечный городок» (макет design/mockups/Sunny.dc.html).
+const SKY := Color("#CFEFFF")          # фон (просто голубой, без облаков — выбор Тима)
+const SKY_TOP := SKY
+const SKY_BOT := SKY
+const BG := SKY
 const BG2 := Color("#ffffff")          # карточки и окна
 const CARD := Color("#ffffff")
-const PANEL := Color("#7c8db4")        # нейтральные кнопки
-const INK := Color("#26334f")          # тёмный текст
-const TEXT := Color("#ffffff")         # светлый текст (с обводкой)
-const DIM := Color("#62708f")
+const PANEL := Color("#ffffff")        # второстепенные кнопки — белые с тёмным текстом
+const INK := Color("#1F3A2E")          # тёмно-зелёный текст
+const TEXT := Color("#ffffff")         # светлый текст (на цветных плашках)
+const DIM := Color("#2E5A44")
 const GOLD := Color("#ffb81c")
 const SILVER := Color("#b9c6da")
 const BRONZE := Color("#d98a52")
-const ACCENT := Color("#3fc25a")
-const BLUE := Color("#3d7cf5")
-const RED := Color("#f2545b")
-const GRASS := Color("#74c94f")
-const GRASS2 := Color("#67bd43")
+const PRIMARY := Color("#E8604C")      # главная кнопка (красная)
+const PRIMARY_DARK := Color("#B83A2B")
+const ACCENT := Color("#4FA83F")       # «готово», включено
+const BLUE := Color("#4A90D9")
+const RED := Color("#E8604C")
+const FIELD := Color("#5FAE4E")        # газон-подложка поля
+const GRASS := Color("#76C064")        # пустая клетка
+const GRASS2 := Color("#70BA5E")
 const CURB := Color("#efe8d8")
 const CURB_DARK := Color("#cbbf9f")
 const DIRT := Color("#9a7451")
+const LIGHT := Color("#FFF9D6")        # подсветка линии, которая соберётся
 
-# Цвета «зданий»: кирпич, деревянный дом, магазин, стеклянная башня, стекло, офис, кафе.
+# Цвета блоков (тело / тёмная середина). 5 цветов — выбор Тима.
 const BLOCKS := [
-	Color("#e8553f"), Color("#f59a2c"), Color("#f9c832"), Color("#22b3a1"),
-	Color("#45bdf0"), Color("#4e6ef0"), Color("#a65ae3"),
+	Color("#E8604C"), Color("#F5C243"), Color("#4A90D9"), Color("#F28C38"), Color("#9B6BDF"),
 ]
-const BLOCK_NAMES := ["кирпич", "дом", "магазин", "башня", "стекло", "офис", "кафе"]
+const BLOCKS_DARK := [
+	Color("#B83A2B"), Color("#C9862A"), Color("#2F5F9E"), Color("#B85A1A"), Color("#6A3FB0"),
+]
 
-static var font_bold: Font = preload("res://fonts/Inter-ExtraBold.otf")
-static var font: Font = preload("res://fonts/Inter-SemiBold.otf")
+static var font_bold: Font = preload("res://fonts/MPLUSRounded1c-ExtraBold-sub.ttf")
+static var font: Font = preload("res://fonts/MPLUSRounded1c-Bold-sub.ttf")
 static var symbols: Font = preload("res://fonts/DejaVuSans-Bold.ttf")
 
 
-## Символы (★ ● ‹ ×), которых нет в шрифте Inter, берутся из DejaVu.
+## Символы (★ ● ‹ ×), которых нет в основном шрифте, берутся из DejaVu.
 static func setup_fonts() -> void:
 	for f in [font_bold, font]:
 		if f is FontFile and f.fallbacks.is_empty():
@@ -71,17 +77,15 @@ static func button(text: String, col: Color, font_size := 34, min_h := 96) -> Bu
 	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_font_override("font", font_bold)
 	b.add_theme_font_size_override("font_size", font_size)
+	var light := col.get_luminance() > 0.7
+	var fc := INK if light else TEXT
 	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		b.add_theme_color_override(st, TEXT)
-	b.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.4))
+		b.add_theme_color_override(st, fc)
+	b.add_theme_color_override("font_disabled_color", Color(fc, 0.4))
 	var n := box(col, 26)
 	n.border_width_bottom = 8
-	b.add_theme_color_override("font_outline_color", col.darkened(0.45))
-	b.add_theme_constant_override("outline_size", 6)
-	n.border_color = col.darkened(0.35)
-	n.shadow_color = Color(0, 0, 0, 0.25)
-	n.shadow_size = 6
-	n.shadow_offset = Vector2(0, 4)
+	n.border_color = Color(0, 0, 0, 0.12) if light else col.darkened(0.25)
+	n.shadow_color = Color(0, 0, 0, 0.0)
 	var h := n.duplicate()
 	h.bg_color = col.lightened(0.08)
 	var p := n.duplicate()
@@ -89,8 +93,8 @@ static func button(text: String, col: Color, font_size := 34, min_h := 96) -> Bu
 	p.border_width_bottom = 2
 	p.content_margin_top = 6
 	var d := n.duplicate()
-	d.bg_color = col.darkened(0.45)
-	d.border_color = col.darkened(0.6)
+	d.bg_color = col.darkened(0.15)
+	d.border_color = col.darkened(0.3)
 	b.add_theme_stylebox_override("normal", n)
 	b.add_theme_stylebox_override("hover", h)
 	b.add_theme_stylebox_override("pressed", p)
@@ -170,59 +174,22 @@ static func rrect(ci: CanvasItem, r: Rect2, col: Color, rad: float) -> void:
 	_rrect(ci, r, col, rad)
 
 
-## Блок-«здание»: объёмная плитка + рисунок материала (кирпич, окна, витрина…).
+## Блок «В» (макет Hollow.dc.html): квадрат цвета блока, в центре «вдавленный» квадрат
+## тёмного оттенка ~50% размера. Простой, без домиков и окон.
 static func draw_tile(ci: CanvasItem, r: Rect2, idx: int, alpha := 1.0) -> void:
-	var col: Color = BLOCKS[idx]
-	draw_block(ci, r, col, alpha, false)
+	var k := posmod(idx, BLOCKS.size())
+	var col: Color = BLOCKS[k]
+	var dk: Color = BLOCKS_DARK[k]
+	col.a = alpha
+	dk.a = alpha
 	var s := r.size.x
-	var top := Rect2(r.position, Vector2(s, r.size.y * 0.88))
-	var dk := col.darkened(0.28)
-	dk.a = 0.75 * alpha
-	var win := Color("#fff4c2")
-	win.a = 0.95 * alpha
-	var glass := Color("#e8f7ff")
-	glass.a = 0.8 * alpha
-	var w := maxf(1.5, s * 0.045)
-	var p := top.position
-	match idx:
-		0: # кирпич
-			for k in 3:
-				var y := p.y + top.size.y * (0.3 + 0.22 * k)
-				ci.draw_line(Vector2(p.x + s * 0.12, y), Vector2(p.x + s * 0.88, y), dk, w)
-				var off := 0.33 if k % 2 == 0 else 0.55
-				ci.draw_line(Vector2(p.x + s * off, y), Vector2(p.x + s * off, y + top.size.y * 0.22), dk, w)
-		1: # деревянный дом с окном
-			var wr := Rect2(p + top.size * Vector2(0.32, 0.36), top.size * Vector2(0.36, 0.36))
-			_rrect(ci, wr, win, s * 0.05)
-			ci.draw_line(Vector2(wr.get_center().x, wr.position.y), Vector2(wr.get_center().x, wr.end.y), dk, w)
-			ci.draw_line(Vector2(wr.position.x, wr.get_center().y), Vector2(wr.end.x, wr.get_center().y), dk, w)
-		2: # магазин с полосатым навесом
-			var aw := Rect2(p + top.size * Vector2(0.1, 0.12), top.size * Vector2(0.8, 0.28))
-			for k in 4:
-				var c := Color(1, 1, 1, 0.85 * alpha) if k % 2 == 0 else Color("#e8553f", 0.9 * alpha)
-				ci.draw_rect(Rect2(aw.position + Vector2(aw.size.x * k / 4.0, 0), Vector2(aw.size.x / 4.0, aw.size.y)), c)
-			_rrect(ci, Rect2(p + top.size * Vector2(0.22, 0.5), top.size * Vector2(0.56, 0.32)), glass, s * 0.04)
-		3: # стеклянная башня — сетка окон
-			for yy in 3:
-				for xx in 2:
-					var wr := Rect2(p + top.size * Vector2(0.2 + xx * 0.34, 0.16 + yy * 0.25), top.size * Vector2(0.26, 0.17))
-					_rrect(ci, wr, glass if (xx + yy) % 2 == 0 else win, s * 0.03)
-		4: # стекло — блики
-			var g2 := Color(1, 1, 1, 0.55 * alpha)
-			ci.draw_line(p + top.size * Vector2(0.25, 0.85), p + top.size * Vector2(0.75, 0.35), g2, w * 2.2)
-			ci.draw_line(p + top.size * Vector2(0.5, 0.88), p + top.size * Vector2(0.85, 0.53), g2, w * 1.2)
-		5: # офис — окна 3×3, часть светится
-			for yy in 3:
-				for xx in 3:
-					var on := (xx * 7 + yy * 3) % 4 != 0
-					var wr := Rect2(p + top.size * Vector2(0.15 + xx * 0.25, 0.18 + yy * 0.24), top.size * Vector2(0.18, 0.15))
-					ci.draw_rect(wr, win if on else dk)
-		6: # кафе — арка-окно и дверь
-			var arch := Rect2(p + top.size * Vector2(0.24, 0.28), top.size * Vector2(0.52, 0.5))
-			_rrect(ci, arch, win, s * 0.2)
-			ci.draw_line(Vector2(arch.get_center().x, arch.position.y + s * 0.05), Vector2(arch.get_center().x, arch.end.y), dk, w)
-	var dot := Color(1, 1, 1, 0.7 * alpha)
-	ci.draw_circle(r.position + r.size * Vector2(0.16, 0.13), s * 0.045, dot)
+	_rrect(ci, r, col, s * 0.18)
+	var inner := Rect2(r.position + r.size * 0.25, r.size * 0.5)
+	# «вдавленность»: сверху внутри тёмная полоска-тень
+	var sh := dk.darkened(0.35)
+	sh.a = alpha
+	_rrect(ci, inner, sh, s * 0.1)
+	_rrect(ci, Rect2(inner.position + Vector2(0, inner.size.y * 0.2), inner.size * Vector2(1, 0.8)), dk, s * 0.1)
 
 
 ## Белое облако из кругов.
@@ -269,3 +236,8 @@ static func draw_skyline(ci: CanvasItem, base_y: float, width: float, col: Color
 							ci.draw_rect(Rect2(r.position + Vector2(unit * 0.15 + xx * unit * 0.45, yy * unit * 0.55), Vector2(unit * 0.2, unit * 0.25)), wc)
 		x += bw
 		i += 1
+
+
+## Цвет блока по номеру (номер может быть из старого сохранения, где цветов было 7).
+static func block_color(i: int) -> Color:
+	return BLOCKS[posmod(i, BLOCKS.size())]

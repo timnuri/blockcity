@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Block Puzzle — Солнечный городок</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#E8604C}a:hover{color:#1F3A2E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 48px 16px 28px; display: flex; flex-direction: column; gap: 16px; background: #CFEFFF; color: #1F3A2E; font-family: Nunito, system-ui, sans-serif">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<button aria-label="Меню" style="width: 44px; height: 44px; border: none; border-radius: 14px; background: #FFFFFF; color: #1F3A2E; display: flex; align-items: center; justify-content: center">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+</button>
+<div style="display: flex; flex-direction: column; align-items: center">
+<div style="font-size: 13px; font-weight: 800; color: #2E5A44; letter-spacing: 1px">УРОВЕНЬ 3</div>
+<div style="font-size: 40px; font-weight: 900; line-height: 1">1 240</div>
+</div>
+<div style="width: 44px; height: 44px; border-radius: 14px; background: #FFFFFF; color: #1F3A2E; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: 800">
+<span>РЕКОРД</span><span style="font-size: 12px">3 880</span>
+</div>
+</div>
+<div style="display: flex; gap: 8px; justify-content: center">
+<div style="padding: 6px 12px; border-radius: 999px; background: #FFFFFF; color: #1F3A2E; font-size: 13px; font-weight: 800">Свет 3/5</div>
+<div style="padding: 6px 12px; border-radius: 999px; background: #FFFFFF; color: #1F3A2E; font-size: 13px; font-weight: 800">Вода 2/5</div>
+<div style="padding: 6px 12px; border-radius: 999px; background: #FFFFFF; color: #1F3A2E; font-size: 13px; font-weight: 800">Дороги 4/5</div>
+</div>
+<div style="align-self: center; padding: 10px; border-radius: 20px; background: #5FAE4E; box-shadow: 0 6px 0 rgba(0,0,0,0.15)">
+<div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{cells}}" as="c" hint-placeholder-count="64">
+<sc-if value="{{c.house}}" hint-placeholder-val="{{false}}">
+<div style="width: 39px; height: 39px; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; background: {{c.body}}; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.18)">
+<div style="height: 12px; background: {{c.roof}}"></div>
+<div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; gap: 7px">
+<div style="width: 7px; height: 8px; border-radius: 2px; background: #FFFFFF"></div>
+<div style="width: 7px; height: 8px; border-radius: 2px; background: #FFFFFF"></div>
+</div></div>
+</sc-if>
+<sc-if value="{{c.empty}}" hint-placeholder-val="{{true}}">
+<div style="width: 39px; height: 39px; border-radius: 6px; background: #76C064"></div>
+</sc-if>
+</sc-for>
+</div>
+</div>
+<div style="flex-grow: 1; display: flex; justify-content: space-around; align-items: center; padding: 12px; border-radius: 20px; background: #FFFFFF">
+<sc-for list="{{pieces}}" as="p" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px">
+<sc-for list="{{p.cells}}" as="m" hint-placeholder-count="9">
+<sc-if value="{{m.house}}" hint-placeholder-val="{{false}}">
+<div style="width: 26px; height: 26px; border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; background: {{m.body}}; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.18)">
+<div style="height: 8px; background: {{m.roof}}"></div>
+<div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; gap: 4px">
+<div style="width: 4px; height: 5px; border-radius: 2px; background: #FFFFFF"></div>
+<div style="width: 4px; height: 5px; border-radius: 2px; background: #FFFFFF"></div>
+</div></div>
+</sc-if>
+<sc-if value="{{m.empty}}" hint-placeholder-val="{{true}}">
+<div style="width: 26px; height: 26px"></div>
+</sc-if>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const DATA = {"cells": [{"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": false}, {"house": false}, {"house": true, "body": "#F5C243", "roof": "#C9862A"}, {"house": true, "body": "#F5C243", "roof": "#C9862A"}, {"house": false}, {"house": true, "body": "#4A90D9", "roof": "#2F5F9E"}, {"house": true, "body": "#4A90D9", "roof": "#2F5F9E"}, {"house": false}, {"house": false}, {"house": false}, {"house": true, "body": "#F5C243", "roof": "#C9862A"}, {"house": true, "body": "#F5C243", "roof": "#C9862A"}, {"house": false}, {"house": true, "body": "#4A90D9", "roof": "#2F5F9E"}, {"house": true, "body": "#4A90D9", "roof": "#2F5F9E"}, {"house": false}, {"house": false}, {"house": true, "body": "#F28C38", "roof": "#B85A1A"}, {"house": true, "body": "#F28C38", "roof": "#B85A1A"}, {"house": true, "body": "#F28C38", "roof": "#B85A1A"}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": true, "body": "#F28C38", "roof": "#B85A1A"}, {"house": false}, {"house": false}, {"house": false}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": true, "body": "#4A90D9", "roof": "#2F5F9E"}, {"house": true, "body": "#4A90D9", "roof": "#2F5F9E"}], "pieces": [{"cells": [{"house": true, "body": "#F5C243", "roof": "#C9862A"}, {"house": true, "body": "#F5C243", "roof": "#C9862A"}, {"house": false}, {"house": true, "body": "#F5C243", "roof": "#C9862A"}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}]}, {"cells": [{"house": true, "body": "#4A90D9", "roof": "#2F5F9E"}, {"house": true, "body": "#4A90D9", "roof": "#2F5F9E"}, {"house": true, "body": "#4A90D9", "roof": "#2F5F9E"}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}, {"house": false}]}, {"cells": [{"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": false}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": true, "body": "#E8604C", "roof": "#B83A2B"}, {"house": false}, {"house": false}, {"house": false}, {"house": false}]}]};
+function mark(list) { return list.map(function (x) { return Object.assign({}, x, { empty: !x.house }); }); }
+class Component extends DCLogic {
+renderVals() {
+return {
+cells: mark(DATA.cells),
+pieces: DATA.pieces.map(function (p) { return { cells: mark(p.cells) }; })
+};
+}
+}
+</script>
+</body>
+</html>

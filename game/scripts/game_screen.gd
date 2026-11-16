@@ -305,17 +305,17 @@ func _build_hud() -> void:
 	back_b.size = Vector2(84, 84)
 	back_b.pressed.connect(back)
 	top.add_child(back_b)
-	_title = UI.label("", 30, UI.TEXT, true)
+	_title = UI.label("", 30, UI.DIM, true)
 	_title.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title.offset_top = 40
 	top.add_child(_title)
-	_score = UI.label("0", 76, UI.TEXT, true)
+	_score = UI.label("0", 76, UI.INK, true)
 	_score.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_score.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_score.offset_top = 76
 	top.add_child(_score)
-	_best = UI.label("", 26, UI.GOLD, true)
+	_best = UI.label("", 26, UI.DIM, true)
 	_best.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_best.offset_left = -220
 	_best.offset_right = -28
@@ -389,9 +389,7 @@ func _refresh() -> void:
 			_score.pivot_offset = _score.size * 0.5
 			_score.scale = Vector2(1.18, 1.18)
 			create_tween().tween_property(_score, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		if city.set_score(board.score):
-			view.float_text("Новое здание в городе!", Vector2(size.x * 0.5, view.board_rect.position.y - 20), UI.GOLD, 40)
-			Sfx.play("build")
+		city.set_score(board.score)  # город за полем больше не рисуется (фон просто голубой)
 		_best.text = "Рекорд\n%d" % max(int(Save.data.best), board.score)
 	var n := Save.boosters("swap")
 	_swap_btn.text = ("Нажми на фигуру…  (отмена)" if view.swap_mode else "Заменить фигуру  ×%d" % n)

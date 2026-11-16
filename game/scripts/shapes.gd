@@ -2,7 +2,7 @@ class_name Shapes
 extends RefCounted
 ## Фигуры и раздача «трёх фигур».
 
-const COLORS := 7
+const COLORS := 5
 
 # Каждая фигура — список клеток. Вес: чем больше, тем чаще выпадает.
 const LIST := [

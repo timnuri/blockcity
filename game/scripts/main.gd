@@ -1,7 +1,7 @@
 extends Node
 ## Главный узел: фон, переключение экранов (меню, уровни, игра), кнопка «Назад».
 
-const VERSION := "0.2"
+const VERSION := "0.2.1"
 
 var ui_root: Control
 var screen: Control
@@ -32,10 +32,6 @@ func _ready() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_root.add_child(bg)
-	deco = SkyBack.new()
-	deco.set_anchors_preset(Control.PRESET_FULL_RECT)
-	deco.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ui_root.add_child(deco)
 	show_menu()
 
 
@@ -64,11 +60,6 @@ func show_menu() -> void:
 	var root := Control.new()
 	_set_screen(root, "menu")
 	game = null
-	var cb := CityBack.new()
-	cb.set_anchors_preset(Control.PRESET_FULL_RECT)
-	cb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(cb)
-	cb.reset(14)
 
 	# Верхняя полоса: монеты, замены, настройки.
 	var top := HBoxContainer.new()
@@ -101,39 +92,39 @@ func show_menu() -> void:
 	root.add_child(v)
 
 	var has_save: bool = Save.data.get("endless") is Dictionary
-	var play := UI.button("Продолжить" if has_save else "Играть", UI.ACCENT, 46, 130)
+	var play := UI.button("Продолжить" if has_save else "Играть", UI.PRIMARY, 46, 130)
 	play.pressed.connect(func(): start_endless(true))
 	v.add_child(play)
-	var sub := UI.label("Бесконечный режим · рекорд %d" % int(Save.data.best), 26, UI.TEXT, true)
+	var sub := UI.label("Бесконечный режим · рекорд %d" % int(Save.data.best), 26, UI.DIM, true)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(sub)
 	if has_save:
 		var nb := UI.button("Новая партия", UI.PANEL.lightened(0.12), 28, 76)
 		nb.pressed.connect(func(): start_endless(false))
 		v.add_child(nb)
-	var camp := UI.button("Кампания", UI.BLUE, 42, 120)
+	var camp := UI.button("Уровни", UI.PANEL, 42, 112)
 	camp.pressed.connect(show_levels)
 	v.add_child(camp)
 	var done := 0
 	for n in range(1, Levels.count() + 1):
 		if Save.level_medal(n) > 0:
 			done += 1
-	var sub2 := UI.label("Пройдено уровней: %d из %d" % [done, Levels.count()], 26, UI.TEXT, true)
+	var sub2 := UI.label("Пройдено уровней: %d из %d" % [done, Levels.count()], 26, UI.DIM, true)
 	sub2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(sub2)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 20)
 	v.add_child(row)
-	var city := UI.button("Город", Color("#9b59d0"), 34, 100)
+	var city := UI.button("Мой город", UI.PANEL, 34, 100)
 	city.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	city.pressed.connect(func(): _info("Город", "Свой город из блоков появится в версии 0.3.\nМонеты, которые ты копишь сейчас, пригодятся там!"))
 	row.add_child(city)
-	var shop := UI.button("Магазин", UI.GOLD.darkened(0.15), 34, 100)
+	var shop := UI.button("Магазин", Color("#F5C243"), 34, 100)
 	shop.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	shop.pressed.connect(_shop)
 	row.add_child(shop)
 
-	var ver := UI.label("версия %s" % VERSION, 22, UI.TEXT)
+	var ver := UI.label("версия %s" % VERSION, 22, UI.DIM)
 	ver.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	ver.offset_top = -60
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -162,7 +153,7 @@ func show_levels() -> void:
 	back_b.size = Vector2(84, 84)
 	back_b.pressed.connect(show_menu)
 	root.add_child(back_b)
-	var t := UI.label("Глава 1 · Окраина", 44, UI.TEXT, true)
+	var t := UI.label("Глава 1 · Окраина", 44, UI.INK, true)
 	t.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	t.offset_top = 46
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -171,7 +162,7 @@ func show_levels() -> void:
 	for n in range(1, Levels.count() + 1):
 		if Save.level_medal(n) == 3:
 			gold += 1
-	var st := UI.label("Золотых медалей: %d из %d" % [gold, Levels.count()], 26, UI.TEXT, true)
+	var st := UI.label("Золотых медалей: %d из %d" % [gold, Levels.count()], 26, UI.DIM, true)
 	st.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	st.offset_top = 106
 	st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -279,7 +270,7 @@ class Logo extends Control:
 	func _draw() -> void:
 		var cs := 52.0
 		var heights := [2, 3, 3, 4, 4, 3, 3, 2]
-		var cols := [4, 5, 1, 6, 0, 3, 2, 5]
+		var cols := [2, 4, 1, 0, 3, 2, 4, 1]
 		var w := cs * heights.size()
 		var x0 := (size.x - w) * 0.5
 		var base := 210.0
@@ -290,10 +281,8 @@ class Logo extends Control:
 				var r := Rect2(Vector2(x0 + i * cs, base - (k + 1) * cs + bob), Vector2(cs, cs)).grow(-2)
 				UI.draw_tile(self, r, cols[i])
 		var f := UI.font_bold
-		draw_string_outline(f, Vector2(0, base + 104), "БЛОК СИТИ", HORIZONTAL_ALIGNMENT_CENTER, size.x, 92, 22, UI.INK)
-		draw_string(f, Vector2(0, base + 104), "БЛОК СИТИ", HORIZONTAL_ALIGNMENT_CENTER, size.x, 92, UI.TEXT)
-		draw_string_outline(UI.font_bold, Vector2(0, base + 150), "головоломка · кампания · город", HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, 8, UI.INK)
-		draw_string(UI.font_bold, Vector2(0, base + 150), "головоломка · кампания · город", HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, UI.TEXT)
+		draw_string(f, Vector2(0, base + 104), "БЛОК СИТИ", HORIZONTAL_ALIGNMENT_CENTER, size.x, 92, UI.INK)
+		draw_string(UI.font_bold, Vector2(0, base + 150), "головоломка · уровни · город", HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, UI.DIM)
 
 
 ## Небо: солнце и плывущие облака.

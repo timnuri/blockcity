@@ -32,7 +32,7 @@ pointing/emulate_mouse_from_touch=true
 
 [gui]
 
-theme/custom_font="res://fonts/Inter-SemiBold.otf"
+theme/custom_font="res://fonts/MPLUSRounded1c-Bold-sub.ttf"
 
 [rendering]
 
