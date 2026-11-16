@@ -1,7 +1,7 @@
 extends Node
 ## Главный узел: фон, переключение экранов (меню, уровни, игра), кнопка «Назад».
 
-const VERSION := "0.2.1"
+const VERSION := "0.2.2"
 
 var ui_root: Control
 var screen: Control

@@ -174,22 +174,28 @@ static func rrect(ci: CanvasItem, r: Rect2, col: Color, rad: float) -> void:
 	_rrect(ci, r, col, rad)
 
 
-## Блок «В» (макет Hollow.dc.html): квадрат цвета блока, в центре «вдавленный» квадрат
-## тёмного оттенка ~50% размера. Простой, без домиков и окон.
+## Блок со скошенными краями (выбор Тима 16.11.2026, вариант «В»): сплошной, без пустой середины.
+## Тёмная основа, светлая фаска сверху-слева, середина цвета блока.
 static func draw_tile(ci: CanvasItem, r: Rect2, idx: int, alpha := 1.0) -> void:
 	var k := posmod(idx, BLOCKS.size())
 	var col: Color = BLOCKS[k]
 	var dk: Color = BLOCKS_DARK[k]
+	var lt: Color = col.lightened(0.38)
 	col.a = alpha
 	dk.a = alpha
+	lt.a = alpha
 	var s := r.size.x
-	_rrect(ci, r, col, s * 0.18)
-	var inner := Rect2(r.position + r.size * 0.25, r.size * 0.5)
-	# «вдавленность»: сверху внутри тёмная полоска-тень
-	var sh := dk.darkened(0.35)
-	sh.a = alpha
-	_rrect(ci, inner, sh, s * 0.1)
-	_rrect(ci, Rect2(inner.position + Vector2(0, inner.size.y * 0.2), inner.size * Vector2(1, 0.8)), dk, s * 0.1)
+	var b := s * 0.2   # ширина фаски
+	var rad := s * 0.13
+	_rrect(ci, r, dk, rad)
+	var p := r.position
+	var e := r.end
+	var light := PackedVector2Array([
+		p + Vector2(0, rad), p + Vector2(rad, 0), Vector2(e.x - rad * 0.6, p.y), Vector2(e.x - b, p.y + b),
+		p + Vector2(b, b), Vector2(p.x + b, e.y - b), Vector2(p.x, e.y - rad * 0.6),
+	])
+	ci.draw_colored_polygon(light, lt)
+	ci.draw_rect(Rect2(p + Vector2(b, b), r.size - Vector2(b, b) * 2.0), col)
 
 
 ## Белое облако из кругов.
